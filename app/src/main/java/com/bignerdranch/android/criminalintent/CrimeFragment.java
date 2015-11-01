@@ -38,8 +38,10 @@ public class CrimeFragment extends Fragment {
     private EditText mTitleField;
     private Button mDateButton;
     private CheckBox mSolvedCheckBox;
+    private Button mReportButton;
 
-    public  static  CrimeFragment newInstance(UUID crimeId){
+
+    public static CrimeFragment newInstance(UUID crimeId){
         Bundle args = new Bundle();
         args.putSerializable(ARG_CRIME_ID, crimeId);
         CrimeFragment fragment = new CrimeFragment();
@@ -47,11 +49,40 @@ public class CrimeFragment extends Fragment {
         return fragment;
     }
 
+    private void updateDate(String text) {
+        mDateButton.setText(text);
+    }
+
+
+    private String getCrimeReport() {
+        String solvedString = null;
+        if (mCrime.isSolved()) {
+            solvedString = getString(R.string.crime_report_solved);
+        } else {
+            solvedString = getString(R.string.crime_report_unsolved);
+        }
+        String dateFormat = "EEEE, MMM dd";
+        String dateString = android.text.format.DateFormat.format(dateFormat,mCrime.getDate()).toString();        String suspect = mCrime.getSuspect();
+        if (suspect == null) {
+            suspect = getString(R.string.crime_report_no_suspect);
+        } else {
+            suspect = getString(R.string.crime_report_suspect);
+        }
+        String report = getString(R.string.crime_report, mCrime.getTitle(), dateString, solvedString, suspect);
+        return report;
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        UUID crimeID = (UUID) getArguments().getSerializable(CrimeActivity.ARG_CRIME_ID);
-        mCrime = CrimeLab.get(getActivity()).getCrime(crimeID);
+        UUID crimeId = (UUID) getArguments().getSerializable(ARG_CRIME_ID);
+        mCrime = CrimeLab.get(getActivity()).getCrime(crimeId);
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        CrimeLab.get(getActivity()).updateCrime(mCrime);
     }
 
     @Override
@@ -64,7 +95,7 @@ public class CrimeFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_item_del_crime:
-                CrimeLab.get(getActivity()).delCrime(mCrime);
+                CrimeLab.get(getActivity()).delCrime(mCrime.getId());
                 getActivity().finish();
             default:
                 return super.onOptionsItemSelected(item);
@@ -75,6 +106,18 @@ public class CrimeFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_crime, container,false);
+
+        mReportButton = (Button)v.findViewById(R.id.crime_report);
+        mReportButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(Intent.ACTION_SEND);
+                i.setType("text/plain");
+                i.putExtra(Intent.EXTRA_TEXT, getCrimeReport());
+                i.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.crime_report_subject));
+                startActivity(i);
+            }
+        });
         mTitleField = (EditText)v.findViewById(R.id.crime_title);
         mTitleField.setText(mCrime.getTitle());
         mTitleField.addTextChangedListener(new TextWatcher() {
@@ -95,7 +138,7 @@ public class CrimeFragment extends Fragment {
                 mDateButton.setOnClickListener(new View.OnClickListener(){
                     @Override
                     public void onClick(View v){
-                        FragmentManager manager = getFragmentManager();
+                        android.support.v4.app.FragmentManager manager = getFragmentManager();
                         DatePickerFragment dialog = DatePickerFragment.newInstance(mCrime.getDate());
                         dialog.setTargetFragment(CrimeFragment.this, REQUEST_DATE);
                         dialog.show(manager, DIALOG_DATE);
@@ -125,6 +168,8 @@ public class CrimeFragment extends Fragment {
                     mDateButton.setText(mCrime.getDate().toString());
                 }
             }
+
+
 
 
 
